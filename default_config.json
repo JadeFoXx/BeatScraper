@@ -1,0 +1,5 @@
+{
+  "beatsaver_url" : "https://api.beatsaver.com/maps/latest?automapper=false&sort=LAST_PUBLISHED",
+  "beatsaber_custom_levels_directory" : "path/to/custom/levels/directory",
+  "download_count": 10
+}
