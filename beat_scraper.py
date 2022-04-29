@@ -35,7 +35,6 @@ def download_and_extract(level):
     print(f"downloading {name}")
     download = requests.get(level['versions'][0]['downloadURL'])
     zip = zipfile.ZipFile(io.BytesIO(download.content))
-    print(f"extracting {name}")
     zip.extractall(directory + '\\' + f"{id} ({name})")
 
 
@@ -53,4 +52,6 @@ while count > 0:
             if count <= 0:
                 break
             print(f"{count} songs remaining")
+        else:
+            print(f"duplicate {level['name']}, skipping")
     next_page = f"&before={last_date}"
