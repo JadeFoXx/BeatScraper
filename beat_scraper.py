@@ -25,7 +25,7 @@ def get_latest():
     r = requests.get(api + next_page)
     r = r.json()['docs']
     d = r[-1]['uploaded']
-    r = [x for x in r if x['uploader']['curator']]
+    r = [x for x in r if "curator" in x]
     return r, d
 
 
