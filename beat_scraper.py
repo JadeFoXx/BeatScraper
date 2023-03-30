@@ -11,11 +11,8 @@ from tqdm import tqdm
 with open("config.json") as c:
     config = json.load(c)
 
-directory = config['beatsaber_custom_levels_directory']
-api = config['beatsaver_url']
-curated_endpoint = config['curated_endpoint']
-map_id_endpoint = config['id_endpoint']
-map_hash_endpoint = config['hash_endpoint']
+BEATSABER_CUSTOM_LEVELS_DIRECTORY = config['beatsaber_custom_levels_directory']
+BEATSAVER_API = config['beatsaver_api']
 
 
 def to_date(string):
@@ -36,28 +33,23 @@ def sanitize(s):
     return s
 
 
-
-
 def get_installed():
     installed = {}
-    for f in os.scandir(directory):
+    for f in os.scandir(BEATSABER_CUSTOM_LEVELS_DIRECTORY):
         if f.is_dir():
-            map_name = f.name
-            map_id = map_name.split(' ')[0]
-            map_hash = ""
-            map_date = datetime.datetime.min
+            level_name = f.name
+            level_id = level_name.split(' ')[0]
+            level_date = datetime.datetime.min
             if os.path.exists(f.path + '\\' "version.json"):
                 with open(f.path + '\\' "version.json", 'r') as v:
                     version = json.load(v)
-                    map_id = version['id']
-                    map_hash = version['hash']
-                    map_date = to_date(version['date'])
-            installed[map_id] = dict({"name": map_name, "hash": map_hash, "date": map_date})
+                    level_date = to_date(version['date'])
+            installed[level_id] = dict({"id": level_id, "name": level_name, "date": level_date})
     return installed
 
 
 def get_latest_curated_maps(next_page):
-    r = requests.get(api + curated_endpoint + next_page)
+    r = requests.get(BEATSAVER_API + next_page)
     r = r.json()['docs']
     d = r[-1]['uploaded']
     r = [x for x in r if "curator" in x]
@@ -70,29 +62,27 @@ def is_skippable(map_id, map_date, installed):
     return False
 
 
-def get_map_data(map):
-    map_id = str(map['id'])
-    map_name = sanitize(str(map['name']))
-    map_hash = ""
-    map_date = datetime.datetime.min
+def get_map_data(level):
+    level_id = str(level['id'])
+    level_name = sanitize(str(level['name']))
+    level_date = datetime.datetime.min
     download_url = ""
-    for version in map['versions']:
+    for version in level['versions']:
         current_date = to_date(version['createdAt'])
-        if current_date > map_date:
-            map_date = current_date
-            map_hash = str(version['hash'])
+        if current_date > level_date:
+            level_date = current_date
             download_url = version['downloadURL']
-    return map_id, map_name, map_hash, map_date, download_url, len(map['versions'])
+    return level_id, level_name, level_date, download_url, len(level['versions'])
 
 
-def download_and_extract(map_id, map_name, map_hash, map_date, download_url):
+def download_and_extract(level_id, level_name, level_date, download_url):
     try:
         download = requests.get(download_url)
-        zip = zipfile.ZipFile(io.BytesIO(download.content))
-        path = directory + '\\' + f"{map_id} ({map_name})"
-        zip.extractall(path)
+        level_zip = zipfile.ZipFile(io.BytesIO(download.content))
+        path = BEATSABER_CUSTOM_LEVELS_DIRECTORY + '\\' + f"{level_id} ({level_name})"
+        level_zip.extractall(path)
         with open(path + '\\' + 'version.json', 'w') as j:
-            json.dump({"id": map_id, "hash": map_hash, "date": str(map_date)}, j)
+            json.dump({"id": level_id, "name": level_name, "date": str(level_date)}, j)
         return True
     except zipfile.BadZipfile:
         return False
@@ -107,10 +97,10 @@ def run():
     while i > 0:
         latest_curated, last_date = get_latest_curated_maps(next_page)
         for map in latest_curated:
-            map_id, map_name, map_hash, map_date, download_url, version_count = get_map_data(map)
+            map_id, map_name, map_date, download_url, version_count = get_map_data(map)
             if not is_skippable(map_id, map_date, installed):
                 pbar.set_postfix(map=f"{map_name}({version_count})")
-                download_and_extract(map_id, map_name, map_hash, map_date, download_url)
+                download_and_extract(map_id, map_name, map_date, download_url)
                 i -= 1
                 pbar.update(1)
         next_page = f"&before={last_date}"
